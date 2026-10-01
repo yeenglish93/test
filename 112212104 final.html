@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SINGAPORE MRT TACTICAL COMMAND HUB - CYBERPUNK HUD</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+        }
+
+        body {
+            background-color: #06080e;
+            color: #d1d5db;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 50% 50%, rgba(20, 27, 40, 0.9) 0%, rgba(4, 6, 10, 1) 100%),
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 100% 100%, 25px 25px, 25px 25px;
+        }
+
+        /* 數碼矩陣雨動態背景 Canvas */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        .dashboard {
+            width: 100%;
+            max-width: 1200px;
+            background-color: rgba(10, 14, 23, 0.95);
+            border: 2px solid #1e293b;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 0 35px rgba(0, 0, 0, 0.9), inset 0 0 15px rgba(239, 68, 68, 0.05);
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1e293b;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #f3f4f6;
+            font-size: 1.1rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        .header-title .icon {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 2px solid #ef4444;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ef4444;
+            font-size: 11px;
+            animation: blink 1.5s infinite;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.85rem;
+        }
+
+        .btn {
+            background-color: #111827;
+            border: 1px solid #374151;
+            color: #d1d5db;
+            padding: 5px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            border-color: #38bdf8;
+            color: #38bdf8;
+        }
+
+        .btn-danger {
+            background-color: rgba(239, 68, 68, 0.15);
+            border-color: #ef4444;
+            color: #fca5a5;
+        }
+
+        .btn-warning {
+            background-color: rgba(245, 158, 11, 0.15);
+            border-color: #f59e0b;
+            color: #fef08a;
+        }
+
+        .btn-info {
+            background-color: rgba(56, 189, 248, 0.15);
+            border-color: #38bdf8;
+            color: #bae6fd;
+        }
+
+        /* 箭頭導航條 (Arrow Navigation) */
+        .arrow-nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            padding: 8px 15px;
+            margin-bottom: 15px;
+        }
+
+        .arrow-btn {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px solid #38bdf8;
+            color: #38bdf8;
+            width: 36px;
+            height: 30px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .arrow-btn:hover {
+            background: #38bdf8;
+            color: #000;
+            box-shadow: 0 0 10px #38bdf8;
+        }
+
+        .tab-indicator {
+            color: #38bdf8;
+            font-weight: bold;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+        }
+
+        /* Grid Layout (多區塊雙螢幕分工) */
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 850px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background-color: rgba(15, 23, 42, 0.5);
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            position: relative;
+        }
+
+        .card-title {
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sub-text {
+            font-size: 0.7rem;
+            color: #6b7280;
+            font-weight: normal;
+        }
+
+        /* Status Info */
+        .status-info {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+
+        .status-row {
+            display: flex;
+        }
+
+        .status-label {
+            color: #9ca3af;
+            width: 180px;
+        }
+
+        .status-value {
+            color: #ffffff;
+            font-weight: bold;
+        }
+
+        .text-red { color: #ef4444; }
+        .text-green { color: #10b981; }
+        .text-yellow { color: #f59e0b; }
+        .text-blue { color: #38bdf8; }
+
+        /* Table */
+        .log-table-container {
+            max-height: 170px;
+            overflow-y: auto;
+        }
+
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        .log-table th {
+            color: #6b7280;
+            font-weight: normal;
+            padding: 6px 4px;
+            border-bottom: 1px solid #1e293b;
+            position: sticky;
+            top: 0;
+            background-color: #0b1120;
+        }
+
+        .log-table td {
+            padding: 6px 4px;
+            border-bottom: 1px solid #0f172a;
+        }
+
+        .alert-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #4b5563;
+        }
+
+        .alert-dot.red {
+            background-color: #ef4444;
+            box-shadow: 0 0 6px #ef4444;
+            animation: pulse 1s infinite alternate;
+        }
+
+        .alert-dot.green {
+            background-color: #10b981;
+            box-shadow: 0 0 6px #10b981;
+        }
+
+        .row-highlight {
+            background-color: rgba(239, 68, 68, 0.12);
+        }
+
+        /* Bottom Info Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .info-box {
+            background-color: rgba(15, 23, 42, 0.8);
+            border: 1px solid #1e293b;
+            border-radius: 6px;
+            padding: 10px;
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
+
+        .info-val {
+            font-size: 1.05rem;
+            font-weight: bold;
+            color: #ef4444;
+            margin-top: 2px;
+            transition: all 0.3s;
+        }
+
+        .clue-tag {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 2px 8px;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        /* Map Panel */
+        .target-lock {
+            color: #ef4444;
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .map-container {
+            width: 100%;
+            height: 290px;
+            border: 1px dashed #334155;
+            border-radius: 6px;
+            position: relative;
+            background-color: #090d16;
+            overflow: hidden;
+        }
+
+        .map-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-title {
+            position: absolute;
+            bottom: 8px;
+            right: 12px;
+            color: #ef4444;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        /* 動態 SVG 元素動畫 */
+        /* LED 捷運線帶光流動 */
+        .rail-flow {
+            fill: none;
+            stroke: #ffffff;
+            stroke-width: 2;
+            stroke-dasharray: 4 8;
+            animation: railFlowAnim 3s linear infinite;
+            opacity: 0.7;
+        }
+
+        /* 嫌犯實時沿途移動點 (紅色圓圈) */
+        .suspect-moving-dot {
+            animation: moveSuspectPath 16s infinite linear;
+        }
+
+        /* 嫌犯足跡追蹤波紋 */
+        .suspect-crosshair {
+            animation: moveSuspectCrosshair 16s infinite linear;
+        }
+
+        /* 指揮官實時沿途搜捕點 (綠色正方形) */
+        .commander-moving-sq {
+            animation: moveCommanderPath 16s infinite linear;
+        }
+
+        /* 列車流動畫 */
+        .train-dot {
+            fill: #ffffff;
+            r: 3.5;
+            filter: drop-shadow(0 0 6px #ffffff);
+        }
+
+        /* Suspect Profile */
+        .suspect-container {
+            display: flex;
+            gap: 15px;
+            margin-top: 8px;
+        }
+
+        .avatar-box {
+            width: 85px;
+            height: 95px;
+            background: #0b0f19;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .suspect-details {
+            flex: 1;
+        }
+
+        .suspect-id {
+            color: #ef4444;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .danger-level {
+            color: #ef4444;
+            font-size: 0.8rem;
+            margin-bottom: 6px;
+        }
+
+        .feature-summary {
+            font-size: 0.72rem;
+            color: #9ca3af;
+            margin-bottom: 6px;
+            line-height: 1.3;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 4px;
+        }
+
+        .tag {
+            background-color: #1e293b;
+            color: #38bdf8;
+            border: 1px solid #0284c7;
+            font-size: 0.68rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+
+        .tag.yellow {
+            color: #fbbf24;
+            border-color: #d97706;
+        }
+
+        .tag.dark {
+            color: #9ca3af;
+            border-color: #4b5563;
+        }
+
+        /* 頁面切換控制 (Tab Sections) */
+        .tab-section {
+            display: none;
+        }
+
+        .tab-section.active {
+            display: block;
+        }
+
+        /* 進度條 */
+        .bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #1e293b;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 4px;
+        }
+
+        .bar-fill {
+            height: 100%;
+            background: #38bdf8;
+            width: 50%;
+            transition: width 0.5s;
+        }
+
+        .bar-fill.red { background: #ef4444; }
+        .bar-fill.green { background: #10b981; }
+
+        /* KEYFRAMES 動畫設計 */
+        @keyframes railFlowAnim {
+            0% { stroke-dashoffset: 24; }
+            100% { stroke-dashoffset: 0; }
+        }
+
+        /* ★ 嫌犯 (🔴 紅點) 新加坡捷運沿線移動 (NSL -> EWL -> CCL -> DTL) ★ */
+        @keyframes moveSuspectPath {
+            0%   { cx: 210px; cy: 110px; } /* 1: Woodlands (NSL) */
+            25%  { cx: 280px; cy: 160px; } /* 2: Bishan (NS17) */
+            50%  { cx: 280px; cy: 220px; } /* 3: City Hall / Raffles Place (EWL) */
+            75%  { cx: 370px; cy: 220px; } /* 4: Paya Lebar (CCL) */
+            100% { cx: 430px; cy: 170px; } /* 5: Tampines / Changi (DTL/EWL) */
+        }
+
+        @keyframes moveSuspectCrosshair {
+            0%   { transform: translate(210px, 110px); }
+            25%  { transform: translate(280px, 160px); }
+            50%  { transform: translate(280px, 220px); }
+            75%  { transform: translate(370px, 220px); }
+            100% { transform: translate(430px, 170px); }
+        }
+
+        /* ★ 指揮官 (🟩 綠色正方形) 沿線搜捕攔截動線 ★ */
+        @keyframes moveCommanderPath {
+            0%   { transform: translate(140px, 210px); } /* 1: Jurong East (西側) */
+            25%  { transform: translate(210px, 110px); } /* 2: 追至 Woodlands */
+            50%  { transform: translate(280px, 160px); } /* 3: 追至 Bishan */
+            75%  { transform: translate(280px, 220px); } /* 4: 追至 City Hall */
+            100% { transform: translate(370px, 220px); } /* 5: 攔截包圍於 Paya Lebar */
+        }
+
+        @keyframes pulse {
+            0% { opacity: 0.4; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- 數碼矩陣雨動態背景 -->
+<canvas id="matrix-canvas"></canvas>
+
+<div class="dashboard">
+    <!-- Header -->
+    <div class="header">
+        <div class="header-title">
+            <div class="icon">⌖</div>
+            SINGAPORE MRT TACTICAL COMMAND HUB - CENTRAL MONITOR
+        </div>
+        <div class="header-controls">
+            <span>DEFCON: <strong class="text-red" id="defcon-lvl">LEVEL 2</strong></span>
+            <button class="btn btn-warning" onclick="toggleHazard('fire')">🔥 火災 (FIRE)</button>
+            <button class="btn btn-info" onclick="toggleHazard('rain')">🌧️ 暴雨 (RAIN)</button>
+            <button class="btn btn-danger" onclick="toggleHazard('normal')">🟢 恢復正常</button>
+        </div>
+    </div>
+
+    <!-- 頂部與底部通用的箭頭導航條 (Arrow Navigation) -->
+    <div class="arrow-nav-bar">
+        <button class="arrow-btn" onclick="prevTab()">◀</button>
+        <div class="tab-indicator" id="tab-indicator-text">PAGE 1 / 4: 嫌犯與指揮官動線監控 (GEO TRAJECTORY)</div>
+        <button class="arrow-btn" onclick="nextTab()">▶</button>
+    </div>
+
+    <!-- 主網格區域 -->
+    <div class="grid-container">
+        
+        <!-- 左側：動態數據與設備面板 (可切換 4 個 TAB 頁面) -->
+        <div>
+            <!-- TAB 1: 嫌犯與指揮官實時動線 -->
+            <div class="tab-section active" id="tab-1">
+                <div class="card">
+                    <div class="card-title">
+                        TARGET & COMMANDER TRAJECTORY
+                        <span class="sub-text">SMRT LIVE INTERCEPT LOG</span>
+                    </div>
+
+                    <div class="status-info">
+                        <div class="status-row">
+                            <span class="status-label">嫌犯位置 (SUSPECT):</span>
+                            <span class="status-value text-red" id="live-suspect-loc">Woodlands (NS9)</span>
+                        </div>
+                        <div class="status-row">
+                            <span class="status-label">指揮官小隊 (COMMANDER):</span>
+                            <span class="status-value text-green" id="live-cmd-loc">Jurong East (EW24)</span>
+                        </div>
+                        <div class="status-row">
+                            <span class="status-label">攔截距離 (DISTANCE):</span>
+                            <span class="status-value text-yellow" id="live-distance">3 STOPS (CLOSING IN)</span>
+                        </div>
+                        <div class="status-row">
+                            <span class="status-label">監控狀態 (STATUS):</span>
+                            <span class="status-value text-red" id="live-status">TRACKING IN PROGRESS</span>
+                        </div>
+                    </div>
+
+                    <!-- 滾動 Log 列表 -->
+                    <div class="log-table-container">
+                        <table class="log-table">
+                            <thead>
+                                <tr>
+                                    <th>TIME</th>
+                                    <th>LOCATION</th>
+                                    <th>UNIT / MATCH</th>
+                                    <th>ALERT LVL</th>
+                                </tr>
+                            </thead>
+                            <tbody id="log-tbody">
+                                <!-- JS 動態追加變動日誌 -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="info-grid">
+                    <div class="info-box">
+                        <div class="info-label">目前鎖定捷運站 (SMRT STATION):</div>
+                        <div class="info-val" id="card-location">Woodlands (NS9)</div>
+                        <div class="clue-tag" id="card-clue">CLUE ID: SG-011</div>
+                    </div>
+                    <div class="info-box">
+                        <div class="info-label">TIME (REALTIME):</div>
+                        <div class="info-val" id="realtime-clock" style="font-size: 0.95rem;">--:--:-- (UTC+8)</div>
+                        <div style="margin-top: 12px; font-size: 0.75rem; color: #9ca3af;">📷 CCTV LIVE SYNC</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: 防災與設備狀態 (FIRE / FLOOD / ETS) -->
+            <div class="tab-section" id="tab-2">
+                <div class="card">
+                    <div class="card-title">STATION DEFENSE & EQUIPMENT MONITOR</div>
+                    <div style="margin-bottom:12px;">
+                        <span class="status-label">防火捲簾 (Fire Shutters):</span>
+                        <span class="status-value text-red" id="val-shutter">100% Deployed (Closed)</span>
+                        <div class="bar-bg"><div class="bar-fill red" id="bar-shutter" style="width: 100%;"></div></div>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <span class="status-label">抽水幫浦 (Sump Pumps):</span>
+                        <span class="status-value text-blue" id="val-pump">2,400 L/min (Active)</span>
+                        <div class="bar-bg"><div class="bar-fill" id="bar-pump" style="width: 80%;"></div></div>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <span class="status-label">排煙風扇 (Smoke Extraction):</span>
+                        <span class="status-value text-yellow" id="val-fan">100% Max Speed</span>
+                        <div class="bar-bg"><div class="bar-fill red" id="bar-fan" style="width: 100%;"></div></div>
+                    </div>
+                    <div>
+                        <span class="status-label">緊急斷電 (ETS Power):</span>
+                        <span class="status-value text-green" id="val-ets">NORMAL (Track Power ON)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: 全捷運路線與鐵路狀況 -->
+            <div class="tab-section" id="tab-3">
+                <div class="card">
+                    <div class="card-title">SINGAPORE MRT LINES STATUS</div>
+                    <div class="status-info">
+                        <div class="status-row"><span class="status-label">🔴 NSL (North-South):</span><span class="status-value text-green">NORMAL (100%)</span></div>
+                        <div class="status-row"><span class="status-label">🟢 EWL (East-West):</span><span class="status-value text-green">NORMAL (100%)</span></div>
+                        <div class="status-row"><span class="status-label">🟡 CCL (Circle Line):</span><span class="status-value text-yellow">SPEED RESTRICTION</span></div>
+                        <div class="status-row"><span class="status-label">🔵 DTL (Downtown Line):</span><span class="status-value text-green">NORMAL (100%)</span></div>
+                        <div class="status-row"><span class="status-label">🟣 NEL (North-East):</span><span class="status-value text-green">NORMAL (100%)</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: 災害與環境警報紀錄 -->
+            <div class="tab-section" id="tab-4">
+                <div class="card">
+                    <div class="card-title">ENVIRONMENTAL INCIDENT LOG</div>
+                    <div id="env-log-content" style="font-size: 0.85rem; color: #9ca3af; line-height: 1.6;">
+                        🟢 系統正常運作中，無強烈強降雨或火災警報發布。<br>
+                        [08:00:12] SMRT 中央指揮中心連線正常。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：新加坡全島捷運向量地圖與嫌犯畫像卡片 -->
+        <div>
+            <div class="card">
+                <div class="target-lock" id="target-title">TARGET LOCK: [SINGAPORE MRT NETWORK]</div>
+                <div class="map-container">
+                    <svg class="map-svg" viewBox="0 0 500 290" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#101726" stroke-width="0.5"/>
+                            </pattern>
+                        </defs>
+                        <rect width="100%" height="100%" fill="url(#grid)" />
+                        
+                        <!-- 新加坡島嶼海岸線繪製 (粗略幾何框線) -->
+                        <path d="M 80 120 Q 150 70 280 70 Q 420 60 470 120 Q 480 200 420 250 Q 300 270 180 260 Q 60 240 80 120 Z" 
+                              fill="#080e1a" stroke="#1e293b" stroke-width="1.5" />
+
+                        <!-- 標題 -->
+                        <text x="15" y="22" fill="#38bdf8" font-size="11" font-weight="bold">新加坡捷運系統 (Singapore MRT Network)</text>
+
+                        <!-- LED 捷運路線 (高亮線條) -->
+                        <!-- NSL 紅線 -->
+                        <path id="path-nsl" d="M 210 110 L 280 160 L 280 220" fill="none" stroke="#ef4444" stroke-width="4" stroke-linejoin="round" />
+                        <path d="M 210 110 L 280 160 L 280 220" class="rail-flow" />
+
+                        <!-- EWL 綠線 -->
+                        <path id="path-ewl" d="M 140 210 L 280 220 L 370 220 L 450 200" fill="none" stroke="#10b981" stroke-width="4" stroke-linejoin="round" />
+                        <path d="M 140 210 L 280 220 L 370 220 L 450 200" class="rail-flow" />
+
+                        <!-- CCL 黃線 -->
+                        <path id="path-ccl" d="M 280 160 Q 380 140 370 220" fill="none" stroke="#f59e0b" stroke-width="3" />
+
+                        <!-- DTL 藍線 -->
+                        <path id="path-dtl" d="M 180 170 L 280 180 L 430 170" fill="none" stroke="#38bdf8" stroke-width="3" />
+
+                        <!-- 動畫列車流 (Train Dots) -->
+                        <circle class="train-dot" cx="0" cy="0">
+                            <animateMotion path="M 210 110 L 280 160 L 280 220" dur="8s" repeatCount="indefinite" />
+                        </circle>
+                        <circle class="train-dot" cx="0" cy="0">
+                            <animateMotion path="M 140 210 L 280 220 L 370 220 L 450 200" dur="10s" repeatCount="indefinite" />
+                        </circle>
+
+                        <!-- 車站節點圓點 -->
+                        <!-- Woodlands (NS9) -->
+                        <circle cx="210" cy="110" r="4" fill="#ffffff" />
+                        <text x="180" y="100" fill="#f8fafc" font-size="8">Woodlands</text>
+
+                        <!-- Bishan (NS17) -->
+                        <circle cx="280" cy="160" r="4" fill="#ffffff" />
+                        <text x="290" y="160" fill="#f8fafc" font-size="8">Bishan</text>
+
+                        <!-- Jurong East (EW24) -->
+                        <circle cx="140" cy="210" r="4" fill="#ffffff" />
+                        <text x="100" y="225" fill="#f8fafc" font-size="8">Jurong East</text>
+
+                        <!-- City Hall (NS25/EW13) -->
+                        <circle cx="280" cy="220" r="5" fill="#38bdf8" />
+                        <text x="260" y="240" fill="#38bdf8" font-size="9" font-weight="bold">City Hall</text>
+
+                        <!-- Paya Lebar (EW8/CC9) -->
+                        <circle cx="370" cy="220" r="4" fill="#ffffff" />
+                        <text x="360" y="235" fill="#f8fafc" font-size="8">Paya Lebar</text>
+
+                        <!-- Changi Airport (CG2) -->
+                        <circle cx="450" cy="200" r="4" fill="#ffffff" />
+                        <text x="420" y="190" fill="#f8fafc" font-size="8">Changi Airport</text>
+
+                        <!-- ★ 嫌犯線索足跡 (紅色虛線軌跡線與足跡圈) ★ -->
+                        <path d="M 210 110 L 280 160 L 280 220 L 370 220 L 430 170" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="4 4" opacity="0.6" />
+
+                        <!-- ★ 嫌犯實時沿線移動點 (🔴 動態紅色圓圈) ★ -->
+                        <circle class="suspect-moving-dot" cx="210" cy="110" r="6" fill="#ef4444" filter="drop-shadow(0 0 8px #ef4444)" />
+
+                        <!-- 動態紅色瞄準器（跟隨嫌犯） -->
+                        <g class="suspect-crosshair">
+                            <circle cx="0" cy="0" r="16" fill="none" stroke="#ef4444" stroke-width="1.5" />
+                            <line x1="-20" y1="0" x2="20" y2="0" stroke="#ef4444" stroke-width="1" />
+                            <line x1="0" y1="-20" x2="0" y2="20" stroke="#ef4444" stroke-width="1" />
+                        </g>
+
+                        <!-- ★ 指揮官實時沿線搜捕點 (🟩 動態綠色正方形) ★ -->
+                        <g class="commander-moving-sq">
+                            <rect x="-8" y="-8" width="16" height="16" rx="3" fill="#10b981" stroke="#ffffff" stroke-width="1.5" filter="drop-shadow(0 0 8px #10b981)" />
+                            <text x="-12" y="-12" fill="#10b981" font-size="7" font-weight="bold">CMD ALPHA</text>
+                        </g>
+
+                    </svg>
+                    <div class="map-title">MAP: SINGAPORE MRT REALTIME</div>
+                </div>
+                <div style="margin-top: 6px; font-size: 0.75rem; color: #9ca3af; display: flex; justify-content: space-between;">
+                    <span>🔴 嫌犯移動動線 (Red Circle)</span>
+                    <span>🟩 指揮官搜捕點 (Green Square)</span>
+                </div>
+            </div>
+
+            <!-- 嫌犯畫像卡片 -->
+            <div class="card" style="margin-bottom: 0;">
+                <div class="card-title">SUSPECT CLUES & FEATURES (TK-9042)</div>
+                
+                <div class="suspect-container">
+                    <div class="avatar-box">
+                        <svg width="75" height="90" viewBox="0 0 100 120">
+                            <path d="M 25 45 Q 50 10 75 45" fill="#111" />
+                            <rect x="30" y="38" width="40" height="38" rx="8" fill="#d1a384" />
+                            <rect x="31" y="44" width="17" height="11" rx="2" fill="#000" stroke="#333" />
+                            <rect x="52" y="44" width="17" height="11" rx="2" fill="#000" stroke="#333" />
+                            <line x1="48" y1="49" x2="52" y2="49" stroke="#000" stroke-width="2" />
+                            <path d="M 30 58 Q 50 68 70 58 L 70 76 L 30 76 Z" fill="#18181b" />
+                            <path d="M 10 76 L 90 76 L 95 120 L 5 120 Z" fill="#0284c7" />
+                            <circle cx="50" cy="102" r="13" fill="#ffffff" />
+                            <circle cx="50" cy="88" r="3.5" fill="#ef4444" />
+                            <circle cx="50" cy="89" r="1" fill="#f59e0b" />
+                        </svg>
+                    </div>
+
+                    <div class="suspect-details">
+                        <div class="suspect-id">TK-9042</div>
+                        <div class="danger-level">高度危險 (Class A - Armed)</div>
+                        
+                        <div class="feature-summary">
+                            FEATURE SUMMARY:<br>
+                            <strong style="color:#f3f4f6;">BLUE DORAEMON JACKET / SUNGLASSES / MASK</strong>
+                        </div>
+
+                        <div style="font-size: 0.7rem; color: #9ca3af; margin-top: 4px;">KEY CLUES & FEATURES</div>
+                        <div class="tags-container">
+                            <span class="tag">● BLUE DORAEMON JACKET</span>
+                            <span class="tag yellow">😷 MASK</span>
+                            <span class="tag dark">🕶 SUNGLASSES</span>
+                            <span class="tag dark">👖 JEANS</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- ==================== JavaScript 動態連動邏輯 ==================== -->
+<script>
+    // 1. 數碼矩陣雨 (Matrix Rain Background)
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const chars = '0123456789ABCDEF-SMRT';
+    const fontSize = 14;
+    let columns = Math.floor(canvas.width / fontSize);
+    let drops = Array(columns).fill(1);
+
+    function drawMatrix() {
+        ctx.fillStyle = 'rgba(6, 8, 14, 0.1)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#10b981';
+        ctx.font = fontSize + 'px monospace';
+
+        for (let i = 0; i < drops.length; i++) {
+            const text = chars.charAt(Math.floor(Math.random() * chars.length));
+            ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+            if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                drops[i] = 0;
+            }
+            drops[i]++;
+        }
+    }
+    setInterval(drawMatrix, 33);
+
+    // 2. 即時時鐘
+    function updateClock() {
+        const now = new Date();
+        const timeString = now.toTimeString().split(' ')[0] + ' (UTC+8)';
+        document.getElementById('realtime-clock').textContent = timeString;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // 3. 嫌犯 (紅點) 與 指揮官 (綠方塊) 沿線移動連動數據庫
+    const waypoints = [
+        {
+            suspectStation: 'Woodlands (NS9)',
+            cmdStation: 'Jurong East (EW24)',
+            distance: '3 STOPS AWAY',
+            clueId: 'SG-011 (NS9)',
+            cctv: 'CAM-NS9-01',
+            status: 'SUSPECT MOVING SOUTH'
+        },
+        {
+            suspectStation: 'Bishan (NS17)',
+            cmdStation: 'Woodlands (NS9)',
+            distance: '2 STOPS AWAY',
+            clueId: 'SG-012 (NS17)',
+            cctv: 'CAM-NS17-08',
+            status: 'TRANSFERRING TO CCL'
+        },
+        {
+            suspectStation: 'City Hall (NS25/EW13)',
+            cmdStation: 'Bishan (NS17)',
+            distance: '1 STOP AWAY',
+            clueId: 'SG-013 (CITY-HALL)',
+            cctv: 'CAM-EW13-04',
+            status: 'CLOSING IN (CRITICAL)'
+        },
+        {
+            suspectStation: 'Paya Lebar (EW8/CC9)',
+            cmdStation: 'City Hall (NS25)',
+            distance: '1 STOP AWAY',
+            clueId: 'SG-014 (EW8)',
+            cctv: 'CAM-EW8-12',
+            status: 'INTERCEPT TEAM IN POSITION'
+        },
+        {
+            suspectStation: 'Tampines / Changi (DTL)',
+            cmdStation: 'Paya Lebar (EW8)',
+            distance: 'CORNERED',
+            clueId: 'SG-015 (CHANGI)',
+            cctv: 'CAM-CG2-02',
+            status: 'TARGET CORNERED / ARREST'
+        }
+    ];
+
+    let currentStep = 0;
+
+    function syncTrackingData() {
+        const data = waypoints[currentStep];
+        
+        // 更新左側面板 UI
+        document.getElementById('live-suspect-loc').textContent = data.suspectStation;
+        document.getElementById('live-cmd-loc').textContent = data.cmdStation;
+        document.getElementById('live-distance').textContent = data.distance;
+        document.getElementById('live-status').textContent = data.status;
+        document.getElementById('card-location').textContent = data.suspectStation;
+        document.getElementById('card-clue').textContent = 'CLUE ID: ' + data.clueId;
+
+        // 追加最新追蹤日誌表格
+        const tbody = document.getElementById('log-tbody');
+        const now = new Date();
+        const timeStr = now.toTimeString().split(' ')[0];
+
+        const tr = document.createElement('tr');
+        tr.className = 'row-highlight';
+        tr.innerHTML = `
+            <td class="text-red">${timeStr}</td>
+            <td class="text-red">${data.suspectStation.split(' ')[0]}</td>
+            <td class="text-red">${data.cctv}</td>
+            <td class="text-red"><span class="alert-dot red"></span> Match (${data.clueId})</td>
+        `;
+
+        tbody.insertBefore(tr, tbody.firstChild);
+
+        if (tbody.children.length > 5) {
+            tbody.removeChild(tbody.lastChild);
+        }
+
+        // 循環步驟 (配合 CSS 16 秒路徑動畫分 5 段，每段 3.2 秒)
+        currentStep = (currentStep + 1) % waypoints.length;
+    }
+
+    setInterval(syncTrackingData, 3200);
+    syncTrackingData();
+
+    // 4. 箭頭頁面切換控制 (Tab Switcher)
+    let currentTab = 1;
+    const totalTabs = 4;
+    const tabNames = [
+        "PAGE 1 / 4: 嫌犯與指揮官動線監控 (GEO TRAJECTORY)",
+        "PAGE 2 / 4: 防災與設備狀態 (STATION DEFENSE)",
+        "PAGE 3 / 4: 全捷運路線與鐵路狀況 (LINE STATUS)",
+        "PAGE 4 / 4: 災害與環境警報紀錄 (INCIDENT LOGS)"
+    ];
+
+    function showTab(tabIndex) {
+        currentTab = tabIndex;
+        for (let i = 1; i <= totalTabs; i++) {
+            const sec = document.getElementById(`tab-${i}`);
+            if (sec) {
+                sec.classList.toggle('active', i === currentTab);
+            }
+        }
+        document.getElementById('tab-indicator-text').textContent = tabNames[currentTab - 1];
+    }
+
+    function nextTab() {
+        let next = currentTab + 1;
+        if (next > totalTabs) next = 1;
+        showTab(next);
+    }
+
+    function prevTab() {
+        let prev = currentTab - 1;
+        if (prev < 1) prev = totalTabs;
+        showTab(prev);
+    }
+
+    // 5. 災害模擬按鈕處置 (Fire / Rain Hazard Engine)
+    function toggleHazard(type) {
+        const defcon = document.getElementById('defcon-lvl');
+        const envLog = document.getElementById('env-log-content');
+        
+        if (type === 'fire') {
+            defcon.textContent = 'LEVEL 1 (CRITICAL - FIRE)';
+            envLog.innerHTML = `
+                <span class="text-red">🔥 [CRITICAL ALARM] City Hall 站 B2 發生火災煙霧警報！</span><br>
+                > 防火捲簾：100% 強制落鎖隔離火源<br>
+                > 排煙風扇：全速抽風中 (100% RPM)<br>
+                > 系統引導：人流向 Exit M1/M2 疏散。
+            `;
+            showTab(2); // 自動切換至設備頁面
+        } else if (type === 'rain') {
+            defcon.textContent = 'LEVEL 2 (FLOOD WARNING)';
+            envLog.innerHTML = `
+                <span class="text-blue">🌧️ [HEAVY RAIN] 新加坡中央區降雨量達 85mm/hr！</span><br>
+                > 防洪閘門：已開啟防汛防線<br>
+                > 沉水幫浦：全力抽水 (2,400 L/min)<br>
+                > 水位監測：極為安全。
+            `;
+            showTab(2);
+        } else {
+            defcon.textContent = 'LEVEL 2';
+            envLog.innerHTML = `🟢 系統正常運作中，無強烈強降雨或火災警報發布。<br>[08:00:12] SMRT 中央指揮中心連線正常。`;
+            showTab(1);
+        }
+    }
+</script>
+
+</body>
+</html>
